@@ -3,8 +3,8 @@ from rest_framework.views import APIView
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from .models import Article
-from .serializers import ArticleSerializer, UserSerializer
+from .models import Article, Comment
+from .serializers import ArticleSerializer, UserSerializer, CommentSerializer
 from django.contrib.auth import authenticate, login
 from rest_framework.response import Response
 from django.contrib.auth.models import User
@@ -82,8 +82,9 @@ class ListCreateArticleView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         article = Article.objects.create(
             title=request.data["title"],
-            author=request.data["author"],
-            content=request.data["content"]
+            author=request.user.username,
+            content=request.data["content"],
+            author_key=request.user
         )
         return Response(
             data=ArticleSerializer(article).data,
@@ -95,3 +96,48 @@ class SignupView(generics.CreateAPIView):
     model = User
     permission_classes = (permissions.AllowAny,)
     serializer_class = UserSerializer
+
+
+class IsAuthor(permissions.AllowAny):
+    def has_permission(self, request, view):
+        article = view.queryset.filter(pk=view.kwargs.get('pk'))
+        if article:
+            if article[0].author_key_id == request.user.id:
+                return True
+            else:
+                return False
+        else:
+            return True
+
+
+class GetOrUpdateArticleByID(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ArticleSerializer
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser, IsAuthor)
+    queryset = Article.objects.all()
+    lookup_field = 'pk'
+
+
+class ListCreateCommentView(generics.ListCreateAPIView):
+    serializer_class = CommentSerializer
+    permission_classes = (permissions.AllowAny,)
+
+    def get_queryset(self):
+        queryset = Comment.objects.filter(article_id=self.kwargs.get('article_id'))
+        return queryset
+
+    def post(self, request, *args, **kwargs):
+        article = Article.objects.get(pk=self.kwargs.get('article_id'))
+        print(article)
+        if article:
+            comment = Comment.objects.create(
+                comment=request.data["comment"],
+                article=article
+            )
+            return Response(
+                data=CommentSerializer(comment).data,
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(
+                status=status.HTTP_404_NOT_FOUND
+            )

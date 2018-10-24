@@ -1,12 +1,18 @@
 from rest_framework import serializers
-from .models import Article
+from .models import Article, Comment
 from django.contrib.auth.models import User
 
 
 class ArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
-        fields = ("title", "author")
+        fields = ("title", "author", "content")
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ("comment",)
 
 
 class TokenSerializer(serializers.Serializer):
