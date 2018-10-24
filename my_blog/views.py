@@ -1,5 +1,6 @@
-
-from rest_framework.views import APIView
+from django.contrib.auth import logout
+from django.contrib.auth.views import SuccessURLAllowedHostsMixin, LogoutView
+from django.views.generic import TemplateView
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -10,7 +11,7 @@ from rest_framework.response import Response
 from django.contrib.auth.models import User
 from rest_framework_jwt.settings import api_settings
 from rest_framework import permissions, generics
-from rest_framework.views import status
+from rest_framework.views import status, APIView
 
 
 # Get the JWT settings, add these lines after the import/from lines
@@ -141,3 +142,10 @@ class ListCreateCommentView(generics.ListCreateAPIView):
             return Response(
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class CustomLogoutView(LogoutView):
+    permission_classes = (permissions.IsAuthenticated,)
+    def post(self, request, *args, **kwargs):
+        """Logout may be done via POST."""
+        return self.get(request, *args, **kwargs)
